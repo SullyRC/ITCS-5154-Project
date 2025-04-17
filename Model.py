@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from fastai.vision.all import *
+from fastai.callback.tracker import SaveModelCallback
 import torch
 import torch.nn as nn
 import os
@@ -82,6 +83,7 @@ class PatchTransform(Transform):
     def __init__(self, patch_size=16):
         self.patch_size = patch_size
 
+    @torch.no_grad()
     def encodes(self, img: TensorImage):
         patches = image_to_patches(img, patch_size=self.patch_size)
         return patches
@@ -104,12 +106,15 @@ imagenet_dblock = DataBlock(
 print("Loading data")
 
 # Create DataLoader
-dls = imagenet_dblock.dataloaders(filename, bs=32, num_workers=2)
-
+dls = imagenet_dblock.dataloaders(filename, bs=16,
+                                  num_workers=2, persistent_workers=False)
 print("Data loaded")
 
 if __name__ == '__main__':
-    model = VisionTransformer(num_classes=n_classes,depth=6).to(device)
-    learn = Learner(dls, model, loss_func=CrossEntropyLossFlat(), metrics=accuracy)
+    model = VisionTransformer(num_classes=n_classes,depth=4, mlp_dim=500).to(device)
+    learn = Learner(dls, model,
+                    loss_func=CrossEntropyLossFlat(),
+                    metrics=accuracy).to_fp16()
     # Train the model
-    learn.fit(5,  1e-5)
+    learn.fit(5,  1e-5, cbs=[SaveModelCallback(every_epoch=True,
+                                               fname='model_checkpoint')]).to
