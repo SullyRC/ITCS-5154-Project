@@ -99,7 +99,7 @@ imagenet_dblock = DataBlock(
     get_y = parent_label,
     splitter=RandomSplitter(valid_pct=0.2),
     item_tfms=[Resize(224), ToTensor(), PatchTransform(patch_size=16)],
-    batch_tfms=Normalize.from_stats(*(imagenet_mean, imagenet_std))
+    #batch_tfms=Normalize.from_stats(*(imagenet_mean, imagenet_std))
 )
 
 print("Loading data")
@@ -110,7 +110,7 @@ dls = imagenet_dblock.dataloaders(filename, bs=16, num_workers=2)
 print("Data loaded")
 
 if __name__ == '__main__':
-    model = VisionTransformer(num_classes=n_classes).to(device)
+    model = VisionTransformer(num_classes=n_classes,depth=6).to(device)
     learn = Learner(dls, model, loss_func=CrossEntropyLossFlat(), metrics=accuracy)
     # Train the model
-    learn.fit(1,  1e-4)
+    learn.fit(1,  1e-5)
