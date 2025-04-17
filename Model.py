@@ -89,8 +89,7 @@ class PatchTransform(Transform):
 n_classes = len(os.listdir(filename))
 
 # Define ImageNet normalization values
-imagenet_mean = [0.485, 0.456, 0.406]
-imagenet_std = [0.229, 0.224, 0.225]
+image_mean_stats = ( [0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 
 # Create DataBlock with PatchTransform
 imagenet_dblock = DataBlock(
@@ -99,13 +98,13 @@ imagenet_dblock = DataBlock(
     get_y = parent_label,
     splitter=RandomSplitter(valid_pct=0.2),
     item_tfms=[Resize(224), ToTensor(), PatchTransform(patch_size=16)],
-    #batch_tfms=Normalize.from_stats(*(imagenet_mean, imagenet_std))
+    #batch_tfms=Normalize.from_stats(*image_mean_stats)
 )
 
 print("Loading data")
 
 # Create DataLoader
-dls = imagenet_dblock.dataloaders(filename, bs=16, num_workers=2)
+dls = imagenet_dblock.dataloaders(filename, bs=32, num_workers=2)
 
 print("Data loaded")
 
@@ -113,4 +112,4 @@ if __name__ == '__main__':
     model = VisionTransformer(num_classes=n_classes,depth=6).to(device)
     learn = Learner(dls, model, loss_func=CrossEntropyLossFlat(), metrics=accuracy)
     # Train the model
-    learn.fit(1,  1e-5)
+    learn.fit(5,  1e-5)
