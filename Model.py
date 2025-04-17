@@ -12,8 +12,23 @@ from fastai.vision.all import *
 import torch
 import torch.nn as nn
 import os
+import zipfile
+
+filename = './imagenet_files'
+
+if not os.path.exists(filename):
+
+    # Download the files
+    os.system('kaggle datasets download dimensi0n/imagenet-256')
+
+    # Extract it to this file
+    with zipfile.ZipFile('C:imagenet-256.zip', 'r') as zip_ref:
+        zip_ref.extractall(filename)
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+os.environ["TORCH_USE_CUDA_DSA"] = "1"
+
 
 class PatchEmbedding(nn.Module):
     def __init__(self, img_size=224, patch_size=16, in_channels=3, embed_dim=768):
@@ -71,7 +86,7 @@ class PatchTransform(Transform):
         patches = image_to_patches(img, patch_size=self.patch_size)
         return patches
     
-n_classes = len(os.listdir('ILSVRC/Data/DET/train/ILSVRC2013_train'))
+n_classes = len(os.listdir(filename))
 
 # Define ImageNet normalization values
 imagenet_mean = [0.485, 0.456, 0.406]
@@ -81,17 +96,21 @@ imagenet_std = [0.229, 0.224, 0.225]
 imagenet_dblock = DataBlock(
     blocks=(ImageBlock, CategoryBlock),
     get_items=get_image_files,
+    get_y = parent_label,
     splitter=RandomSplitter(valid_pct=0.2),
     item_tfms=[Resize(224), ToTensor(), PatchTransform(patch_size=16)],
     batch_tfms=Normalize.from_stats(*(imagenet_mean, imagenet_std))
 )
 
+print("Loading data")
+
 # Create DataLoader
-dls = imagenet_dblock.dataloaders("ILSVRC/Data/DET/train/ILSVRC2013_train", bs=16, num_workers = 0)
+dls = imagenet_dblock.dataloaders(filename, bs=16, num_workers=2)
+
+print("Data loaded")
 
 if __name__ == '__main__':
     model = VisionTransformer(num_classes=n_classes).to(device)
     learn = Learner(dls, model, loss_func=CrossEntropyLossFlat(), metrics=accuracy)
-
     # Train the model
-    learn.fit(5, .001)
+    learn.fit(1,  1e-4)
