@@ -117,4 +117,5 @@ if __name__ == '__main__':
                     metrics=accuracy).to_fp16()
     # Train the model
     learn.fit(5,  1e-5, cbs=[SaveModelCallback(every_epoch=True,
-                                               fname='model_checkpoint')]).to
+                                               fname='model_checkpoint')]
+              )
