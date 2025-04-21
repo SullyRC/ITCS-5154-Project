@@ -90,32 +90,32 @@ class PatchTransform(Transform):
     
 n_classes = len(os.listdir(filename))
 
-# Define ImageNet normalization values
-image_mean_stats = ( [0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-
 # Create DataBlock with PatchTransform
 imagenet_dblock = DataBlock(
     blocks=(ImageBlock, CategoryBlock),
     get_items=get_image_files,
     get_y = parent_label,
     splitter=RandomSplitter(valid_pct=0.2),
-    item_tfms=[Resize(224), ToTensor(), PatchTransform(patch_size=16)],
-    #batch_tfms=Normalize.from_stats(*image_mean_stats)
+    item_tfms=[Resize(224), 
+               ToTensor(), PatchTransform(patch_size=16)],
+    batch_tfms=[*aug_transforms()]
 )
 
 print("Loading data")
 
 # Create DataLoader
-dls = imagenet_dblock.dataloaders(filename, bs=16,
-                                  num_workers=2, persistent_workers=False)
+dls = imagenet_dblock.dataloaders(filename, bs=64,
+                                  num_workers=0, persistent_workers=False)
 print("Data loaded")
 
 if __name__ == '__main__':
-    model = VisionTransformer(num_classes=n_classes,depth=4, mlp_dim=500).to(device)
+    model = VisionTransformer(num_classes=n_classes,depth=6, mlp_dim=1000).to(device)
+    #model.load_state_dict(torch.load('models_old/model_checkpoint_4.pth'))
     learn = Learner(dls, model,
                     loss_func=CrossEntropyLossFlat(),
-                    metrics=accuracy).to_fp16()
+                    metrics=accuracy)
+    
     # Train the model
-    learn.fit(5,  1e-5, cbs=[SaveModelCallback(every_epoch=True,
+    learn.fit(10,  1e-5, cbs=[SaveModelCallback(every_epoch=True,
                                                fname='model_checkpoint')]
               )
